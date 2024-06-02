@@ -1,7 +1,7 @@
 ﻿#powershell -File
 
 [cmdletBinding(SupportsShouldProcess=$false, ConfirmImpact='Medium')]
-param($HTTPEndPoint = 'http://localhost:8083/', $LocalRoot = './view/')
+param($HTTPEndPoint = 'http://localhost:8082/', $LocalRoot = './view/')
 
 $ErrorActionPreference = 'Stop'
 $VerbosePreference = 'Continue'
@@ -93,14 +93,8 @@ $listener.Prefixes.Add( $HTTPEndPoint )
 $listener.Start()
 Write-Verbose "Listening at $HTTPEndPoint..."
 
-if( [console]::TreatControlCAsInput -eq $true){
-  Write-Verbose We have a problem Jim
-}
+Register-ObjectEvent -InputObject $host -EventName PowerShellExit -Action { Kill-Server }  
 
-#Register-ObjectEvent -InputObject $host -EventName PowerShellExit -Action {  }  
-[System.Windows.Forms.Application]::DoEvents() 
-
-try{
 while ($listener.IsListening) {
   $context = $listener.GetContext()
   $requestUrl = $context.Request.Url
@@ -111,8 +105,12 @@ while ($listener.IsListening) {
     $localPath = $requestUrl.LocalPath
     #Close server
     if ($localPath -eq '/kill') {
-      Kill-Server
+      Kill-Server -response $response -listener $listener
       break; 
+    }
+    if ($localPath.startsWith("/xls/")){
+      Write-Verbose "Excel request detected"
+      break;
     }
     $FullPath = join-path -Path $LocalRoot -ChildPath $LocalPath
     if ( Test-Path $FullPath )  {
@@ -126,8 +124,4 @@ while ($listener.IsListening) {
     $response.StatusCode = 500
   }
   $response.Close()
-}
-}
-finally {
-  Kill-Server
 }
