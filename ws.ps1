@@ -1,8 +1,4 @@
-﻿###
-##
-# Minimal CMS
-##
-###
+﻿#powershell -File
 
 [cmdletBinding(SupportsShouldProcess=$false, ConfirmImpact='Medium')]
 param($HTTPEndPoint = 'http://localhost:8081/', $LocalRoot = './view/')
@@ -10,13 +6,10 @@ param($HTTPEndPoint = 'http://localhost:8081/', $LocalRoot = './view/')
 $ErrorActionPreference = 'Stop'
 $VerbosePreference = 'Continue'
 
-#The old approach is obsolete, the new approach counts on nuget
-#So I would rather have this contained in here, if the filetype
-#is not in here, it wont be served (security..)
+#The old approach is obsolete, a local approach adds security
 function Get-MimeType {
   param ([string]$filename)
 
-  # Define a hash table to map file extensions to MIME types
   $mimeTypeMap = @{
     '.txt' = 'text/plain';
     '.html' = 'text/html';
@@ -35,11 +28,7 @@ function Get-MimeType {
   $extension = [IO.Path]::GetExtension($filename)
 
   # Look up the MIME type for the file extension in the hash table
-  if ($mimeTypeMap.ContainsKey($extension)) {
-    return $mimeTypeMap[$extension]
-  } else {
-    Write-Verbose "Unknown file extension: $extension"
-  }
+  return $mimeTypeMap[$extension]
 }
 
 function Get-HTTPStringResponse {
@@ -54,6 +43,13 @@ function Get-HTTPStringResponse {
 function Get-HTTPResponse  {  
   param($response, $path)
 
+  $binaryMimeTypes = @(
+    "image/png"
+    "image/jpeg"
+    "image/gif"
+    "application/pdf"
+  )
+
   try {
     $mimeType = Get-MimeType($path)
     if($mimeType -eq $null){
@@ -62,15 +58,20 @@ function Get-HTTPResponse  {
     }
     
     # Generate Response
-    $content = ( Get-Content -Path $path -Raw )  
-    $buffer = [System.Text.Encoding]::UTF8.GetBytes($content)
+    if ($binaryMimeTypes -contains $mimeType) {
+      if ($PSMajorVersion -gt 5) {
+        $content = ( Get-Content -Path $path -AsByteStream -Raw )        
+      } else {
+        $content = ( Get-Content -Path $path -Encoding Byte -Raw )        
+      }      
+    } else {
+      $content = ( Get-Content -Path $path -Raw )  
+      $content = [System.Text.Encoding]::UTF8.GetBytes($content)
+    }
     
-    $length = $buffer.Length
-    Write-Verbose "Length: $length"
-    
-    $response.ContentLength64 = $buffer.Length
-    $response.ContentType = $mimeType
-    $response.OutputStream.Write($buffer, 0, $buffer.Length)   
+    $response.ContentType = $mimeType    
+    $response.ContentLength64 = $content.Length
+    $response.OutputStream.Write($content, 0, $content.Length)   
   }
   catch [System.Exception] {
     Write-Verbose "ERROR: $($_)"

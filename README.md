@@ -14,9 +14,15 @@ Kept as reference implementation
 
 ## WS.ps1
 
-A clone of the previous shell.
-Defaulted hosting folder as ./view
-Local MIME mapping, blocks unknown MIME calls
+Changes to Powershell-WebServer.ps1
+* A clone of the previous shell.
+* Defaulted hosting folder as ./view
+* Increased impact to Medium
+* Local MIME mapping, blocks unknown MIME calls
+* Differentiate between text and binary responses
+* Dumb down parameters for easier reading / cutting lines
+* Support binary mime types (PowerShell 5.1 and 6+)
+
 
 **You still need to visit /kill to kill the process**
 
