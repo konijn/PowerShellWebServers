@@ -16,3 +16,23 @@ Kept as reference implementation
 
 A clone of the previous shell.
 Defaulted hosting folder as ./view
+Local MIME mapping, blocks unknown MIME calls
+
+**You still need to visit /kill to kill the process**
+
+
+## Oops
+
+Sometimes you will still hog the port, and need to kill the process
+
+`netstat -ano | findstr :8080 |grep LISTENING`
+
+if this returns
+
+
+`  TCP    [::]:8080              [::]:0                 LISTENING       12345`
+
+then you would run
+
+`taskkill /PID 12345 /F`
+
