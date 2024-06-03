@@ -1,12 +1,12 @@
-﻿#powershell -File
+#powershell -File
 
-[cmdletBinding(SupportsShouldProcess=$false, ConfirmImpact='Medium')]
-param($HTTPEndPoint = 'http://localhost:8083/', $LocalRoot = './view/')
+[cmdletBinding(ConfirmImpact='Low')]
+param($HTTPEndPoint = 'http://localhost:8080/', $LocalRoot = './view/')
 
 $ErrorActionPreference = 'Stop'
 $VerbosePreference = 'Continue'
 
-#The old approach is obsolete, a local approach adds security
+#The old approach is obsolete, plus a local approach adds some security
 function Get-MimeType {
   param ([string]$filename)
 
@@ -23,12 +23,8 @@ function Get-MimeType {
     '.pdf' = 'application/pdf';
     '.webmanifest' = 'application/manifest+json';
   }
-
-  # Get the file extension from the filename
-  $extension = [IO.Path]::GetExtension($filename)
-
   # Look up the MIME type for the file extension in the hash table
-  return $mimeTypeMap[$extension]
+  return $mimeTypeMap[ [IO.Path]::GetExtension($filename) ]
 }
 
 function Get-HTTPStringResponse {
@@ -40,7 +36,7 @@ function Get-HTTPStringResponse {
   $response.OutputStream.Write($buffer, 0, $buffer.Length)       
 }
 
-function Get-HTTPResponse  {  
+function Get-HTTPResponse {  
   param($response, $path)
 
   $binaryMimeTypes = @(
@@ -52,14 +48,14 @@ function Get-HTTPResponse  {
 
   try {
     $mimeType = Get-MimeType($path)
-    if($mimeType -eq $null){
+    if ( $mimeType -eq $null ) {
       Get-HTTPStringResponse -Response $response -string "Unsupported MIME type"
       return
     }
     
-    # Generate Response
-    if ($binaryMimeTypes -contains $mimeType) {
-      if ($PSMajorVersion -gt 5) {
+    # Handle binary files different from text files, binary handling is different for 6+
+    if ( $binaryMimeTypes -contains $mimeType ) {
+      if ( $PSMajorVersion -gt 5 ) {
         $content = ( Get-Content -Path $path -AsByteStream -Raw )        
       } else {
         $content = ( Get-Content -Path $path -Encoding Byte -Raw )        
@@ -72,19 +68,8 @@ function Get-HTTPResponse  {
     $response.ContentType = $mimeType    
     $response.ContentLength64 = $content.Length
     $response.OutputStream.Write($content, 0, $content.Length)   
-  }
-  catch [System.Exception] {
+  } catch [System.Exception] {
     Write-Verbose "ERROR: $($_)"
-    return ""
-  }
-}
-
-function Kill-Server {
-  Write-Verbose "Stopping server...";
-  $listener.Close(); 
-  if($reponse -ne $null){
-    $response.StatusCode = 200; 
-    $response.Close();
   }
 }
 
@@ -92,42 +77,42 @@ $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add( $HTTPEndPoint )
 $listener.Start()
 Write-Verbose "Listening at $HTTPEndPoint..."
-
-if( [console]::TreatControlCAsInput -eq $true){
-  Write-Verbose We have a problem Jim
-}
-
-#Register-ObjectEvent -InputObject $host -EventName PowerShellExit -Action {  }  
-[System.Windows.Forms.Application]::DoEvents() 
+Write-Verbose "To stop, visit $HTTPEndPoint/kill or press Control Break, and then type quit<enter>"
 
 try{
-while ($listener.IsListening) {
-  $context = $listener.GetContext()
-  $requestUrl = $context.Request.Url
-  $response = $context.Response
-  $method = $context.Request.HttpMethod 
+  while ($listener.IsListening){
 
-  try {    
-    $localPath = $requestUrl.LocalPath
-    #Close server
-    if ($localPath -eq '/kill') {
-      Kill-Server
-      break; 
+    $contextTask = $listener.GetContextAsync()
+    while (-not $contextTask.AsyncWaitHandle.WaitOne(200)){}
+    $context = $contextTask.GetAwaiter().GetResult()
+
+    $requestUrl = $context.Request.Url
+    $response = $context.Response
+    $method = $context.Request.HttpMethod 
+  
+    try {    
+      $localPath = $requestUrl.LocalPath
+      if ( $localPath -eq "/" ) { $localPath = "/index.html" }
+      if ( $localPath -eq '/kill' ) { break } #kill server
+      $FullPath = join-path -Path $LocalRoot -ChildPath $LocalPath
+      if ( Test-Path $FullPath ) {
+        Write-Verbose "Querying $requestUrl"
+        Get-HTTPResponse -response $response -path  $FullPath         
+      } else {
+		$response.StatusCode = 404  
+        Write-Verbose "$response.StatusCode $requestUrl"
+      }
+    } catch {
+      $response.StatusCode = 500
+	  Write-Verbose "$response.StatusCode $requestUrl"
+	  Write-Verbose "ERROR: $($_)"
     }
-    $FullPath = join-path -Path $LocalRoot -ChildPath $LocalPath
-    if ( Test-Path $FullPath )  {
-      Write-Verbose "Querying $requestUrl"
-      Get-HTTPResponse -response $response -path  $FullPath         
-    } else {
-      Write-Verbose "404 $requestUrl"
-      $response.StatusCode = 404
-    }
-  } catch {
-    $response.StatusCode = 500
+    $response.Close()
   }
-  $response.Close()
-}
+} catch {
+  Write-Verbose "ERROR: $($_)"    
 }
 finally {
-  Kill-Server
+  Write-Verbose "Stopping server..."
+  $listener.Close()
 }
