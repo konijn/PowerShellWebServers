@@ -12,7 +12,7 @@ It's not threaded, and currently doesn't handle mime types other then text, but 
 
 Kept as reference implementation
 
-## WS.ps1
+## ws.ps1
 
 Changes to Powershell-WebServer.ps1
 * A clone of the previous shell.
@@ -22,23 +22,13 @@ Changes to Powershell-WebServer.ps1
 * Differentiate between text and binary responses
 * Dumb down parameters for easier reading / cutting lines
 * Support binary mime types (PowerShell 5.1 and 6+)
+* You can kill now by pressing control C (sometimes you need to press twice)
 
 
-**You still need to visit /kill to kill the process**
+## wsx.ps1
 
-
-## Oops
-
-Sometimes you will still hog the port, and need to kill the process
-
-`netstat -ano | findstr :8080 |grep LISTENING`
-
-if this returns
-
-
-`  TCP    [::]:8080              [::]:0                 LISTENING       12345`
-
-then you would run
-
-`taskkill /PID 12345 /F`
-
+Cloned from WS.ps1
+* REST services to access Excel files
+  * Workbooks list 
+  * Worksheets list
+* Internal consistency checks added
