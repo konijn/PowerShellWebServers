@@ -1,7 +1,9 @@
-﻿#powershell -File
+﻿#powershell -File 
 
 [cmdletBinding(ConfirmImpact='Low')]
 param($HTTPEndPoint = 'http://localhost:8080/', $LocalRoot = './view/')
+
+Set-StrictMode -Version latest
 
 $ErrorActionPreference = 'Stop'
 $VerbosePreference = 'Continue'
@@ -56,7 +58,7 @@ function Get-HTTPResponse {
     
     # Handle binary files different from text files, binary handling is different for 6+
     if ( $binaryMimeTypes -contains $mimeType ) {
-      if ( $PSMajorVersion -gt 5 ) {
+      if ( $PSVersionTable.PSVersion -gt 5 ) {
         $content = ( Get-Content -Path $path -AsByteStream -Raw )        
       } else {
         $content = ( Get-Content -Path $path -Encoding Byte -Raw )        
@@ -219,13 +221,13 @@ try{
           Get-HTTPResponse -response $response -path  $FullPath         
         } else {
           $response.StatusCode = 404  
-          Write-Verbose "$response.StatusCode $requestUrl"
+          Write-Verbose "$($response.StatusCode) $requestUrl"
         }
       }
     } catch {
       $response.StatusCode = 500
-	  Write-Verbose "$response.StatusCode $requestUrl"
-	  Write-Verbose "ERROR: $($_)"
+      Write-Verbose "$($response.StatusCode) $requestUrl"
+      Write-Verbose "ERROR: $($_)"
       Write-Host $_.ScriptStackTrace
     }
     $response.Close()

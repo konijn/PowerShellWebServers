@@ -1,7 +1,9 @@
-#powershell -File
+#powershell -File 
 
 [cmdletBinding(ConfirmImpact='Low')]
 param($HTTPEndPoint = 'http://localhost:8080/', $LocalRoot = './view/')
+
+Set-StrictMode -Version latest
 
 $ErrorActionPreference = 'Stop'
 $VerbosePreference = 'Continue'
@@ -55,7 +57,7 @@ function Get-HTTPResponse {
     
     # Handle binary files different from text files, binary handling is different for 6+
     if ( $binaryMimeTypes -contains $mimeType ) {
-      if ( $PSMajorVersion -gt 5 ) {
+      if ( $PSVersionTable.PSVersion -gt 5 ) {
         $content = ( Get-Content -Path $path -AsByteStream -Raw )        
       } else {
         $content = ( Get-Content -Path $path -Encoding Byte -Raw )        
@@ -114,5 +116,7 @@ try{
 }
 finally {
   Write-Verbose "Stopping server..."
+  $listener.Stop()
   $listener.Close()
+  $listener.Dispose()
 }
