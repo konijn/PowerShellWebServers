@@ -58,7 +58,7 @@ function Get-HTTPResponse {
     
     # Handle binary files different from text files, binary handling is different for 6+
     if ( $binaryMimeTypes -contains $mimeType ) {
-      if ( $PSVersionTable.PSVersion -gt 5 ) {
+      if ( $PSVersionTable.PSVersion.Major -gt 5 ) {
         $content = ( Get-Content -Path $path -AsByteStream -Raw )        
       } else {
         $content = ( Get-Content -Path $path -Encoding Byte -Raw )        
@@ -106,17 +106,14 @@ function Route-Rest {
   
   $stream = $response.OutputStream
   
+  $path = $path.trimStart("/xls/api/")
+  
   $sections = $path -split '/'
-  $sections = $sections[3..$sections.Count]
-
   $sectionsCount = $sections.Count
-  Write-Verbose "Section count $sectionsCount"
-  foreach ($section in $sections) {
-    Write-Verbose $section
-  }
+  Write-Verbose "html $htmlRequested Path $path Section count $sectionsCount"
   
   # Provide the list of workbooks
-  if($sectionsCount -eq 0){
+  if(($sectionsCount -eq 1) -and ($sections[0] -eq "")){
     if( $htmlRequested -eq $true){
       Get-HTTPResponse -response $response -path  "view/xls/xls.api.html"  
     } else {
@@ -131,7 +128,7 @@ function Route-Rest {
   }
   
   # Provide the list of worksheets 
-  if($sectionsCount -eq 1){
+  if(($sectionsCount -eq 1) -and ($sections[0] -ne "")){
     if( $htmlRequested -eq $true){
       Get-HTTPResponse -response $response -path  "view/xls/xls.api-wb.html"  
     } else { 
@@ -153,10 +150,13 @@ function Route-Rest {
       Get-HTTPResponse -response $response -path  "view/xls/xls.api-ws.html"  
     } else { 
       $workbook = Get-WorkbookHandle -BaseName $sections[0]
-      $list = $workbook.Worksheets | Where-Object { $_.Visible -eq -1 } | Select-Object -Property Name
-      foreach($ws in $list){
-        $ws | Add-Member -MemberType NoteProperty -Name uri -Value "/xls/api/$($sections[0])/$($ws.Name)"
-      }
+      $worksheet = $workbook.Sheets.Item("budget")
+        
+      $usedRange = $worksheet.UsedRange
+      $rows = $usedRange.Rows.Count
+      $columns = $usedRange.Columns.Count
+
+
       $json =  $list | ConvertTo-Json 
       Get-HTTPStringResponse -Response $response -string $json -mime 'application/json'      
     }
@@ -217,7 +217,7 @@ try{
       } else {
         $FullPath = join-path -Path $LocalRoot -ChildPath $LocalPath
         if ( Test-Path $FullPath ) {
-          Write-Verbose "Querying $requestUrl"
+          #Write-Verbose "Querying $requestUrl"
           Get-HTTPResponse -response $response -path  $FullPath         
         } else {
           $response.StatusCode = 404  
@@ -237,12 +237,16 @@ try{
 }
 finally {
   Write-Verbose "Stopping server..."
-  $listener.Close()  
+  $listener.Stop()
+  $listener.Close()
+  $listener.Dispose()  
   Write-Verbose "Stopping Excel..."
   # Quit the Excel application
   $excel.Quit()
   # Release COM objects
-  [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
+  foreach($workbook in $workbooks){
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
+  }
   [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
   [System.GC]::Collect()
   [System.GC]::WaitForPendingFinalizers()

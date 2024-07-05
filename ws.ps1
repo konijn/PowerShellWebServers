@@ -57,7 +57,7 @@ function Get-HTTPResponse {
     
     # Handle binary files different from text files, binary handling is different for 6+
     if ( $binaryMimeTypes -contains $mimeType ) {
-      if ( $PSVersionTable.PSVersion -gt 5 ) {
+      if ( $PSVersionTable.PSVersion.Major -gt 5 ) {
         $content = ( Get-Content -Path $path -AsByteStream -Raw )        
       } else {
         $content = ( Get-Content -Path $path -Encoding Byte -Raw )        

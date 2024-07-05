@@ -5,7 +5,10 @@ export function apiDemo() {
     console.log('Doing something!');
 
 	document.addEventListener('DOMContentLoaded', (event) => {
-		fetch('/xls/api/' + document.location.href.split('/').pop(), {
+		const params = document.location.href.split('/');
+		const worksheet = params.pop();
+		const workbook = params.pop();
+		fetch(`/xls/api/${workbook}/${worksheet}`, {
 			method: 'GET',
 			headers: {
 				'Accept': 'application/json'

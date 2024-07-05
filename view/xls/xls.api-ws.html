@@ -11,7 +11,7 @@
     <title>/xls/api</title>
   </head>
   <body>
-    <h3>/xls/api</h3>
+    <h3>/xls/api/&lt;workbook&gt;/&lt;worksheet&gt;</h3>
     
     <b>Table</b><br>
 	<div id="table"></div>
@@ -22,7 +22,7 @@
 	<textarea id ="json" cols="80" rows="25"></textarea>
 
 	<script type="module">
-		import { apiDemo } from '/xls/xls.api-wb.js';
+		import { apiDemo } from '/xls/xls.api-ws.js';
 		
 		// Use the imported function
 		apiDemo();
