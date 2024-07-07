@@ -1,4 +1,4 @@
-import {jsonToTable} from '/xls/json2tab.js';
+import {TableToTable} from '/xls/tab2tab.js';
 
 // script.js (ES6 module)
 export function apiDemo() {
@@ -21,9 +21,10 @@ export function apiDemo() {
 			return response.json();
 		})
 		.then(data => {
-			console.log(Object.keys(data[0]));
+			console.log(data);
 			document.getElementById('json').value = JSON.stringify(data);
-			document.getElementById('table').appendChild(jsonToTable(data));
+      //data.values.unshift(data.keys);
+			document.getElementById('table').appendChild(TableToTable(data));
 		})
 		.catch(error => {
 			console.error('There has been a problem with your fetch operation:', error);
