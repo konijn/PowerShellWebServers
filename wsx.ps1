@@ -145,24 +145,50 @@ function Route-Rest {
   # GET Provide the data of a worksheet (all of it)
   # PUT  updating existing line(s)
   # POST add new line(s)
+  
   if($sectionsCount -eq 2){
+    $fields = @()
+    $lines = @()
     if( $htmlRequested -eq $true){
       Get-HTTPResponse -response $response -path  "view/xls/xls.api-ws.html"  
     } else { 
       $workbook = Get-WorkbookHandle -BaseName $sections[0]
-      $worksheet = $workbook.Sheets.Item("budget")
+      $worksheet = $workbook.Sheets.Item($sections[1])
         
       $usedRange = $worksheet.UsedRange
       $rows = $usedRange.Rows.Count
       $columns = $usedRange.Columns.Count
-
-
-      $json =  $list | ConvertTo-Json 
-      Get-HTTPStringResponse -Response $response -string $json -mime 'application/json'      
-    }
-  }  
-  
-  
+	  
+      if( $columns -eq 0 ){
+        $fields = @("Error");
+        $lines = @(@("No columns are defined in this Worksheet"))
+      } else {
+        $fields = @()
+        $dataRange = $worksheet.Range("A1", $worksheet.Cells.Item(1, $columns))
+        for ($col = 1; $col -le $columns; $col++) {
+          $fields += $worksheet.Cells.Item(1, $col).Text
+        }
+        
+        if($rows -gt 1 ){
+          for ($row = 2; $row -le $rows; $row++) {
+            $line = @()
+            for ($col = 1; $col -le $columns; $col++) {
+              $value = $worksheet.Cells.Item($row, $col).Text
+              $line += $value
+            }
+            $lines += ,$line
+          }   
+        }
+      }
+      $data = [PSCustomObject]@{
+        fields = $fields
+        values = $lines
+      }
+      $json =  $data | ConvertTo-Json 
+      Write-Verbose $json
+      Get-HTTPStringResponse -Response $response -string $json -mime 'application/json'            
+		}
+  }
 }
 
 #Perform sanity checks
@@ -187,7 +213,7 @@ $listener.Start()
 Write-Verbose "Listening at $HTTPEndPoint..."
 Write-Verbose "To stop this you have options:"
 Write-Verbose "1. Visit $HTTPEndPoint/kill"
-Write-Verbose "2. Press Control-C once or twice"
+Write-Verbose "2. Press Control-C"
 Write-Verbose "3. Press Control Break, and then type quit<enter>"
 
 try{
