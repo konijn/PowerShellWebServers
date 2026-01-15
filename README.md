@@ -3,6 +3,7 @@
 Simple powershell web server. Inspired by https://github.com/ChristopherGLewis/PowerShellWebServers
 
 ## Powershell-WebServer.ps1
+## The Original
 This takes the HTTPListener to the extreme, and creates a moderately functioning web server.  
 
 You pass a URL to listen on, and a path that's your root (has to end in a '\\'), 
@@ -13,6 +14,7 @@ It's not threaded, and currently doesn't handle mime types other then text, but 
 Kept as reference implementation
 
 ## ws.ps1
+## The Upgrade
 
 Changes to Powershell-WebServer.ps1
 * A clone of the previous shell.
@@ -27,6 +29,7 @@ Changes to Powershell-WebServer.ps1
 
 
 ## wsx.ps1
+## Going Boldly..
 
 Cloned from WS.ps1
 * REST services to access Excel files
